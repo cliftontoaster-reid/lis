@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "info": {
+      "type": "object",
+      "patternProperties": {
+        "^[0-9]+$": { "$ref": "#/definitions/infoEntry" }
+      },
+      "additionalProperties": false
+    },
+    "error": { "type": "string" }
+  },
+  "required": ["info", "error"],
+  "definitions": {
+    "item": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "name": { "type": "string" },
+        "type": { "enum": ["text", "list"] },
+        "list": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "required": ["id", "name", "type"],
+      "if": {
+        "properties": { "type": { "const": "list" } }
+      },
+      "then": {
+        "required": ["list"]
+      }
+    },
+    "infoEntry": {
+      "type": "object",
+      "properties": {
+        "group": { "type": "string" },
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/item" }
+        }
+      },
+      "required": ["group", "items"]
+    }
+  }
+}
