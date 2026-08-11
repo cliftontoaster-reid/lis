@@ -1,0 +1,248 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    name: Schedule gate
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.gate.outputs.run }}
+      reason: ${{ steps.gate.outputs.reason }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          event_name='${{ github.event_name }}'
+          if [ "$event_name" != "schedule" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "reason=non-schedule event" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          latest_commit="$(git log -1 --format=%ct)"
+          now="$(date -u +%s)"
+          age_days=$(( (now - latest_commit) / 86400 ))
+          weekday="$(date -u +%u)"
+
+          if [ "$age_days" -lt 7 ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "reason=recent commits found ($age_days days old)" >> "$GITHUB_OUTPUT"
+          elif [ "$weekday" = "7" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "reason=weekly stale run" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "reason=no recent commits and not the weekly run day" >> "$GITHUB_OUTPUT"
+          fi
+
+  linux:
+    name: Linux
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install dependencies
+        run: ./scripts/install-linux.sh
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build
+      - name: Test
+        run: ctest --test-dir build --output-junit junit.xml --output-on-failure
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: junit.xml
+          flags: linux
+          handle_no_reports_found: true
+
+  coverage:
+    name: Coverage
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install dependencies
+        run: ./scripts/install-linux.sh --coverage
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DLIS_BUILD_COVERAGE=ON
+      - name: Build
+        run: cmake --build build
+      - name: Generate coverage report
+        run: cmake --build build --target coverage
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: build/junit.xml
+          flags: coverage
+          handle_no_reports_found: true
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: build/coverage/coverage.xml
+          flags: unittests
+          fail_ci_if_error: true
+
+  macos:
+    name: macOS
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install dependencies
+        run: ./scripts/install-macos.sh
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DOPENSSL_ROOT_DIR="$(brew --prefix openssl)"
+      - name: Build
+        run: cmake --build build
+      - name: Test
+        run: ctest --test-dir build --output-junit junit.xml --output-on-failure
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: junit.xml
+          flags: macos
+          handle_no_reports_found: true
+
+  windows-msvc:
+    name: Windows MSVC
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      OPENSSL_ROOT_DIR: C:\Program Files\OpenSSL-Win64
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Install dependencies
+        shell: pwsh
+        run: .\scripts\install-windows.ps1
+      - name: Configure
+        shell: pwsh
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DOPENSSL_ROOT_DIR="$env:OPENSSL_ROOT_DIR"
+      - name: Build
+        shell: pwsh
+        run: cmake --build build
+      - name: Test
+        shell: pwsh
+        run: ctest --test-dir build --output-junit junit.xml --output-on-failure
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: junit.xml
+          flags: windows-msvc
+          handle_no_reports_found: true
+
+  windows-mingw:
+    name: Windows MinGW
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+      - name: Install dependencies
+        shell: msys2 {0}
+        run: bash ./scripts/install-msys2.sh
+      - name: Configure
+        shell: msys2 {0}
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DOPENSSL_ROOT_DIR=/mingw64
+      - name: Build
+        shell: msys2 {0}
+        run: cmake --build build
+      - name: Test
+        shell: msys2 {0}
+        run: ctest --test-dir build --output-junit junit.xml --output-on-failure
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: junit.xml
+          flags: windows-mingw
+          handle_no_reports_found: true
+
+  linux-distros:
+    name: Linux distro (${{ matrix.name }})
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Debian
+            image: debian:13
+            bootstrap: apt-get update && apt-get install -y git
+          - name: Fedora
+            image: fedora:44
+            bootstrap: dnf install -y git
+          - name: Arch
+            image: archlinux:base-devel
+            bootstrap: pacman -Sy --noconfirm && pacman -S --noconfirm --needed git
+          - name: Alpine
+            image: alpine:3.24
+            bootstrap: apk add --no-cache git bash
+    container:
+      image: ${{ matrix.image }}
+    steps:
+      - name: Bootstrap git/bash for checkout
+        shell: sh
+        run: ${{ matrix.bootstrap }}
+      - uses: actions/checkout@v7
+      - name: Install dependencies
+        shell: bash
+        run: ./scripts/install-linux.sh
+      - name: Configure
+        shell: bash
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        shell: bash
+        run: cmake --build build
+      - name: Test
+        shell: bash
+        run: ctest --test-dir build --output-junit junit.xml --output-on-failure
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: junit.xml
+          flags: ${{ matrix.name }}
+          handle_no_reports_found: true
