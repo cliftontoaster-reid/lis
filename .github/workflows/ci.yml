@@ -68,11 +68,12 @@ jobs:
         run: ctest --test-dir build --output-junit junit.xml --output-on-failure
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}
-        uses: codecov/test-results-action@v1
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: junit.xml
           flags: linux
+          report_type: test_results
           handle_no_reports_found: true
 
   coverage:
@@ -93,11 +94,12 @@ jobs:
         run: cmake --build build --target coverage
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}
-        uses: codecov/test-results-action@v1
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: build/junit.xml
           flags: coverage
+          report_type: test_results
           handle_no_reports_found: true
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v7
@@ -125,11 +127,12 @@ jobs:
         run: ctest --test-dir build --output-junit junit.xml --output-on-failure
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}
-        uses: codecov/test-results-action@v1
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: junit.xml
           flags: macos
+          report_type: test_results
           handle_no_reports_found: true
 
   windows-msvc:
@@ -138,8 +141,6 @@ jobs:
     if: needs.gate.outputs.run == 'true'
     runs-on: windows-latest
     timeout-minutes: 45
-    env:
-      OPENSSL_ROOT_DIR: C:\Program Files\OpenSSL-Win64
     steps:
       - uses: actions/checkout@v7
       - uses: ilammy/msvc-dev-cmd@v1
@@ -157,11 +158,12 @@ jobs:
         run: ctest --test-dir build --output-junit junit.xml --output-on-failure
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}
-        uses: codecov/test-results-action@v1
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: junit.xml
           flags: windows-msvc
+          report_type: test_results
           handle_no_reports_found: true
 
   windows-mingw:
@@ -190,11 +192,12 @@ jobs:
         run: ctest --test-dir build --output-junit junit.xml --output-on-failure
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}
-        uses: codecov/test-results-action@v1
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: junit.xml
           flags: windows-mingw
+          report_type: test_results
           handle_no_reports_found: true
 
   linux-distros:
@@ -240,9 +243,10 @@ jobs:
         run: ctest --test-dir build --output-junit junit.xml --output-on-failure
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}
-        uses: codecov/test-results-action@v1
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: junit.xml
           flags: ${{ matrix.name }}
+          report_type: test_results
           handle_no_reports_found: true

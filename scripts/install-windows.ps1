@@ -77,6 +77,35 @@ $machinePath = [Environment]::GetEnvironmentVariable('Path', 'Machine')
 $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
 $env:Path = ($machinePath + ';' + $userPath + ';C:\ProgramData\chocolatey\bin;C:\Program Files\CMake\bin;C:\Program Files\Ninja\bin')
 
+$opensslCandidates = @(
+    $env:OPENSSL_ROOT_DIR,
+    "$env:ProgramFiles\OpenSSL-Win64",
+    "$env:ProgramFiles\OpenSSL",
+    "$env:ChocolateyToolsLocation\openssl"
+)
+$opensslCommand = Get-Command openssl -ErrorAction SilentlyContinue
+if ($opensslCommand) {
+    $opensslCandidates += Split-Path (Split-Path $opensslCommand.Source -Parent) -Parent
+}
+
+$opensslRoot = $opensslCandidates |
+    Where-Object {
+        $_ -and
+        (Test-Path (Join-Path $_ 'include\openssl\ssl.h')) -and
+        (Get-ChildItem -Path $_ -Filter 'libcrypto*.lib' -Recurse -ErrorAction SilentlyContinue)
+    } |
+    Select-Object -First 1
+
+if (-not $opensslRoot) {
+    throw 'OpenSSL installation was not found after package installation.'
+}
+
+$env:OPENSSL_ROOT_DIR = $opensslRoot
+if ($env:GITHUB_ENV) {
+    "OPENSSL_ROOT_DIR=$opensslRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+}
+Write-Host "Using OpenSSL root: $opensslRoot"
+
 Write-Host 'Installed toolchain versions:'
 foreach ($tool in @('cmake', 'ninja', 'git', 'ccache')) {
     if (Get-Command $tool -ErrorAction SilentlyContinue) {
