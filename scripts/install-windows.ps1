@@ -43,23 +43,6 @@ if ($choco) {
         }
     }
 
-    $zlibRoots = @(
-        "$env:ProgramFiles\zlib",
-        "$env:ChocolateyToolsLocation\zlib",
-        "$env:ChocolateyToolsLocation",
-        "$env:ProgramData\chocolatey\lib"
-    ) | Where-Object { $_ -and (Test-Path $_) }
-    $zlibInstalled = $zlibRoots | ForEach-Object {
-        $header = Get-ChildItem -Path $_ -Filter 'zlib.h' -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($header) {
-            $root = Split-Path (Split-Path $header.FullName -Parent) -Parent
-            Get-ChildItem -Path $root -Filter 'zlib*.lib' -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
-        }
-    } | Select-Object -First 1
-    if (-not $zlibInstalled) {
-        $required += 'zlib'
-    }
-
     if ($required.Count -gt 0) {
         Write-Host "Installing missing packages via Chocolatey: $($required -join ', ')..."
         choco install -y --no-progress $required
@@ -91,7 +74,8 @@ if ($choco) {
         [Console]::Error.WriteLine('')
         [Console]::Error.WriteLine('Option 1: install the Chocolatey bootstrapper, then:')
         [Console]::Error.WriteLine('  Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = 3072; iex ((New-Object System.Net.WebClient).DownloadString(''https://community.chocolatey.org/install.ps1''))')
-        [Console]::Error.WriteLine('  choco install -y --no-progress cmake ninja git ccache openssl 7zip zlib curl gnupg')
+        [Console]::Error.WriteLine('  choco install -y --no-progress cmake ninja git ccache openssl 7zip curl gnupg')
+        [Console]::Error.WriteLine('  C:\vcpkg\vcpkg.exe install zlib:x64-windows --disable-metrics')
         [Console]::Error.WriteLine('')
         [Console]::Error.WriteLine('Option 2: install each package with winget:')
         [Console]::Error.WriteLine('  winget install --id Kitware.CMake --silent')
@@ -105,6 +89,34 @@ if ($choco) {
         [Console]::Error.WriteLine('')
         [Console]::Error.WriteLine('Then re-run this script.')
         exit 1
+    }
+}
+
+$vcpkgRoot = if ($env:VCPKG_ROOT) { $env:VCPKG_ROOT } else { 'C:\vcpkg' }
+$vcpkg = Join-Path $vcpkgRoot 'vcpkg.exe'
+$zlibRoots = @(
+    $env:ZLIB_ROOT,
+    (Join-Path $vcpkgRoot 'installed\x64-windows'),
+    "$env:ProgramFiles\zlib",
+    "$env:ChocolateyToolsLocation\zlib",
+    "$env:ChocolateyToolsLocation",
+    "$env:ProgramData\chocolatey\lib"
+) | Where-Object { $_ -and (Test-Path $_) }
+$zlibInstalled = $zlibRoots | ForEach-Object {
+    $header = Get-ChildItem -Path $_ -Filter 'zlib.h' -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($header) {
+        $root = Split-Path (Split-Path $header.FullName -Parent) -Parent
+        Get-ChildItem -Path $root -Filter 'zlib*.lib' -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+    }
+} | Select-Object -First 1
+if (-not $zlibInstalled) {
+    if (-not (Test-Path $vcpkg)) {
+        throw "MSVC zlib development files were not found and vcpkg was not found at '$vcpkg'."
+    }
+    Write-Host 'Installing MSVC zlib via vcpkg...'
+    & $vcpkg install zlib:x64-windows --disable-metrics
+    if ($LASTEXITCODE -ne 0) {
+        throw "vcpkg zlib installation failed with exit code $LASTEXITCODE."
     }
 }
 
@@ -151,6 +163,7 @@ Write-Host "Using OpenSSL root: $opensslRoot"
 Write-Host 'Discovering zlib development files...'
 $zlibSearchRoots = @(
     $env:ZLIB_ROOT,
+    (Join-Path $vcpkgRoot 'installed\x64-windows'),
     "$env:ProgramFiles\zlib",
     "$env:ChocolateyToolsLocation\zlib",
     "$env:ChocolateyToolsLocation",
