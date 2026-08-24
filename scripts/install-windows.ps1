@@ -34,7 +34,6 @@ if ($choco) {
     $required = @()
     foreach ($package in @(
         @{ Name = 'ccache'; Command = 'ccache' },
-        @{ Name = 'openssl'; Command = 'openssl' },
         @{ Name = 'curl'; Command = 'curl' },
         @{ Name = 'gnupg'; Command = 'gpg' }
     )) {
@@ -74,8 +73,8 @@ if ($choco) {
         [Console]::Error.WriteLine('')
         [Console]::Error.WriteLine('Option 1: install the Chocolatey bootstrapper, then:')
         [Console]::Error.WriteLine('  Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = 3072; iex ((New-Object System.Net.WebClient).DownloadString(''https://community.chocolatey.org/install.ps1''))')
-        [Console]::Error.WriteLine('  choco install -y --no-progress cmake ninja git ccache openssl 7zip curl gnupg')
-        [Console]::Error.WriteLine('  C:\vcpkg\vcpkg.exe install zlib:x64-windows --disable-metrics')
+        [Console]::Error.WriteLine('  choco install -y --no-progress cmake ninja git ccache 7zip curl gnupg')
+        [Console]::Error.WriteLine('  Run this script to install OpenSSL and zlib through vcpkg.')
         [Console]::Error.WriteLine('')
         [Console]::Error.WriteLine('Option 2: install each package with winget:')
         [Console]::Error.WriteLine('  winget install --id Kitware.CMake --silent')
@@ -94,31 +93,35 @@ if ($choco) {
 
 $vcpkgRoot = if ($env:VCPKG_ROOT) { $env:VCPKG_ROOT } else { 'C:\vcpkg' }
 $vcpkg = Join-Path $vcpkgRoot 'vcpkg.exe'
-$zlibRoots = @(
-    $env:ZLIB_ROOT,
-    (Join-Path $vcpkgRoot 'installed\x64-windows'),
-    "$env:ProgramFiles\zlib",
-    "$env:ChocolateyToolsLocation\zlib",
-    "$env:ChocolateyToolsLocation",
-    "$env:ProgramData\chocolatey\lib"
-) | Where-Object { $_ -and (Test-Path $_) }
-$zlibInstalled = $zlibRoots | ForEach-Object {
-    $header = Get-ChildItem -Path $_ -Filter 'zlib.h' -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($header) {
-        $root = Split-Path (Split-Path $header.FullName -Parent) -Parent
-        Get-ChildItem -Path $root -Filter 'zlib*.lib' -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
-    }
-} | Select-Object -First 1
-if (-not $zlibInstalled) {
-    if (-not (Test-Path $vcpkg)) {
-        throw "MSVC zlib development files were not found and vcpkg was not found at '$vcpkg'."
-    }
-    Write-Host 'Installing MSVC zlib via vcpkg...'
-    & $vcpkg install zlib:x64-windows --disable-metrics
-    if ($LASTEXITCODE -ne 0) {
-        throw "vcpkg zlib installation failed with exit code $LASTEXITCODE."
-    }
+if (-not (Test-Path $vcpkg)) {
+    throw "MSVC OpenSSL and zlib require vcpkg, but it was not found at '$vcpkg'."
 }
+
+$manifestRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("lis-vcpkg-" + [guid]::NewGuid().ToString())
+New-Item -ItemType Directory -Path $manifestRoot | Out-Null
+@'
+{
+  "name": "lis-windows-dependencies",
+  "version-string": "0.1.0",
+  "dependencies": [
+    "openssl",
+    "zlib"
+  ]
+}
+'@ | Set-Content -Path (Join-Path $manifestRoot 'vcpkg.json') -Encoding utf8
+
+Write-Host 'Installing MSVC OpenSSL and zlib via vcpkg manifest mode...'
+$previousLocation = Get-Location
+try {
+    Set-Location $manifestRoot
+    & $vcpkg install --triplet x64-windows --disable-metrics
+    if ($LASTEXITCODE -ne 0) {
+        throw "vcpkg dependency installation failed with exit code $LASTEXITCODE."
+    }
+} finally {
+    Set-Location $previousLocation
+}
+$vcpkgInstallRoot = Join-Path $manifestRoot 'vcpkg_installed\x64-windows'
 
 Write-Host 'Refreshing PATH for the current process...'
 $machinePath = [Environment]::GetEnvironmentVariable('Path', 'Machine')
@@ -133,6 +136,7 @@ foreach ($tool in @('curl', 'gpg')) {
 
 $opensslCandidates = @(
     $env:OPENSSL_ROOT_DIR,
+    $vcpkgInstallRoot,
     "$env:ProgramFiles\OpenSSL-Win64",
     "$env:ProgramFiles\OpenSSL",
     "$env:ChocolateyToolsLocation\openssl"
@@ -163,7 +167,7 @@ Write-Host "Using OpenSSL root: $opensslRoot"
 Write-Host 'Discovering zlib development files...'
 $zlibSearchRoots = @(
     $env:ZLIB_ROOT,
-    (Join-Path $vcpkgRoot 'installed\x64-windows'),
+    $vcpkgInstallRoot,
     "$env:ProgramFiles\zlib",
     "$env:ChocolateyToolsLocation\zlib",
     "$env:ChocolateyToolsLocation",

@@ -1,0 +1,12 @@
+---
+Checks: >-
+  -*,
+  bugprone-*,
+  cert-*,
+  cppcoreguidelines-*,
+  readability-*
+WarningsAsErrors: '*'
+HeaderFilterRegex: '(^|[/\\])(include|src)[/\\]'
+FormatStyle: file
+InheritParentConfig: false
+...
