@@ -31,9 +31,18 @@ Write-Host 'Detecting package manager...'
 $choco = Get-Command choco -ErrorAction SilentlyContinue
 if ($choco) {
     Write-Host 'Found Chocolatey; installing build toolchain...'
-    choco install -y --no-progress cmake ninja git ccache openssl 7zip zlib curl gnupg
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Warning: choco install exited with code $LASTEXITCODE; continuing anyway."
+    $required = @('ccache', 'openssl', 'zlib', 'gnupg') | Where-Object {
+        -not (Get-Command $_ -ErrorAction SilentlyContinue)
+    }
+
+    if ($required.Count -gt 0) {
+        Write-Host "Installing missing packages via Chocolatey: $($required -join ', ')..."
+        choco install -y --no-progress $required
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Warning: choco install exited with code $LASTEXITCODE; continuing anyway."
+        }
+    } else {
+        Write-Host 'All required Chocolatey tools are already available on PATH.'
     }
 } else {
     $winget = Get-Command winget -ErrorAction SilentlyContinue
