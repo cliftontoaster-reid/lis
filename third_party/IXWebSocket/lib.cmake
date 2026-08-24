@@ -2,6 +2,7 @@ include(FetchContent)
 
 # Configure IXWebSocket options before declaring
 set(USE_TLS ON CACHE BOOL "Enable TLS/SSL in IXWebSocket" FORCE)
+set(USE_OPEN_SSL ON CACHE BOOL "Use OpenSSL for TLS" FORCE)
 
 FetchContent_Declare(
   ixwebsocket
