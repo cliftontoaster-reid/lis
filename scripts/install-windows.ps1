@@ -31,8 +31,33 @@ Write-Host 'Detecting package manager...'
 $choco = Get-Command choco -ErrorAction SilentlyContinue
 if ($choco) {
     Write-Host 'Found Chocolatey; installing build toolchain...'
-    $required = @('ccache', 'openssl', 'zlib', 'gnupg') | Where-Object {
-        -not (Get-Command $_ -ErrorAction SilentlyContinue)
+    $required = @()
+    foreach ($package in @(
+        @{ Name = 'ccache'; Command = 'ccache' },
+        @{ Name = 'openssl'; Command = 'openssl' },
+        @{ Name = 'curl'; Command = 'curl' },
+        @{ Name = 'gnupg'; Command = 'gpg' }
+    )) {
+        if (-not (Get-Command $package.Command -ErrorAction SilentlyContinue)) {
+            $required += $package.Name
+        }
+    }
+
+    $zlibRoots = @(
+        "$env:ProgramFiles\zlib",
+        "$env:ChocolateyToolsLocation\zlib",
+        "$env:ChocolateyToolsLocation",
+        "$env:ProgramData\chocolatey\lib"
+    ) | Where-Object { $_ -and (Test-Path $_) }
+    $zlibInstalled = $zlibRoots | ForEach-Object {
+        $header = Get-ChildItem -Path $_ -Filter 'zlib.h' -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($header) {
+            $root = Split-Path (Split-Path $header.FullName -Parent) -Parent
+            Get-ChildItem -Path $root -Filter 'zlib*.lib' -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+        }
+    } | Select-Object -First 1
+    if (-not $zlibInstalled) {
+        $required += 'zlib'
     }
 
     if ($required.Count -gt 0) {
@@ -87,6 +112,12 @@ Write-Host 'Refreshing PATH for the current process...'
 $machinePath = [Environment]::GetEnvironmentVariable('Path', 'Machine')
 $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
 $env:Path = ($machinePath + ';' + $userPath + ';C:\ProgramData\chocolatey\bin;C:\Program Files\CMake\bin;C:\Program Files\Ninja\bin')
+
+foreach ($tool in @('curl', 'gpg')) {
+    if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) {
+        throw "$tool is required but was not found after package installation."
+    }
+}
 
 $opensslCandidates = @(
     $env:OPENSSL_ROOT_DIR,

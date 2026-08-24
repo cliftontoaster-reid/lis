@@ -26,7 +26,7 @@ fi
 
 echo "==> [install-freebsd] Installing base toolchain via pkg"
 $SUDO pkg update -f
-$SUDO pkg install -y cmake ninja ccache git unzip openssl pkgconf curl gnupg
+$SUDO pkg install -y cmake ninja ccache git unzip openssl zlib pkgconf curl gnupg
 
 echo "==> [install-freebsd] Using base clang (version 18 on FreeBSD 14) as the C++23 compiler"
 echo "==> [install-freebsd] $(cc --version | head -n 1)"

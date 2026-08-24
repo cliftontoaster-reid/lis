@@ -51,6 +51,7 @@ pacman -S --noconfirm --needed \
     mingw-w64-x86_64-ccache \
     mingw-w64-x86_64-openssl \
     mingw-w64-x86_64-curl \
+    mingw-w64-x86_64-zlib \
     gnupg \
     curl
 

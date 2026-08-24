@@ -37,7 +37,7 @@ for prefix in /opt/homebrew /usr/local; do
 done
 
 echo "==> [install-macos] Installing base toolchain via Homebrew"
-brew install cmake ninja git ccache unzip openssl pkg-config curl gnupg
+brew install cmake ninja git ccache unzip openssl zlib pkg-config curl gnupg
 
 echo "==> [install-macos] Note: Homebrew openssl is keg-only and is NOT added to PATH; CMake's find_package finds it via the standard brew paths. No PATH changes needed."
 
