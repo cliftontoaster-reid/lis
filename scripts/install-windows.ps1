@@ -31,7 +31,7 @@ Write-Host 'Detecting package manager...'
 $choco = Get-Command choco -ErrorAction SilentlyContinue
 if ($choco) {
     Write-Host 'Found Chocolatey; installing build toolchain...'
-    choco install -y --no-progress cmake ninja git ccache openssl 7zip
+    choco install -y --no-progress cmake ninja git ccache openssl 7zip zlib curl gnupg
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Warning: choco install exited with code $LASTEXITCODE; continuing anyway."
     }
@@ -39,7 +39,7 @@ if ($choco) {
     $winget = Get-Command winget -ErrorAction SilentlyContinue
     if ($winget) {
         Write-Host 'Chocolatey not found on PATH; falling back to winget (best-effort)...'
-        $wingetIds = @('Kitware.CMake', 'Ninja-build.Ninja', 'Git.Git', 'ccache.ccache', 'ShiningLight.OpenSSL.Light', '7zip.7zip')
+        $wingetIds = @('Kitware.CMake', 'Ninja-build.Ninja', 'Git.Git', 'ccache.ccache', 'ShiningLight.OpenSSL.Light', '7zip.7zip', 'cURL.cURL', 'GnuPG.GnuPG')
         foreach ($id in $wingetIds) {
             try {
                 winget install --id $id --silent --accept-package-agreements --accept-source-agreements
@@ -57,7 +57,7 @@ if ($choco) {
         [Console]::Error.WriteLine('')
         [Console]::Error.WriteLine('Option 1: install the Chocolatey bootstrapper, then:')
         [Console]::Error.WriteLine('  Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = 3072; iex ((New-Object System.Net.WebClient).DownloadString(''https://community.chocolatey.org/install.ps1''))')
-        [Console]::Error.WriteLine('  choco install -y --no-progress cmake ninja git ccache openssl 7zip')
+        [Console]::Error.WriteLine('  choco install -y --no-progress cmake ninja git ccache openssl 7zip zlib curl gnupg')
         [Console]::Error.WriteLine('')
         [Console]::Error.WriteLine('Option 2: install each package with winget:')
         [Console]::Error.WriteLine('  winget install --id Kitware.CMake --silent')
@@ -66,6 +66,8 @@ if ($choco) {
         [Console]::Error.WriteLine('  winget install --id ccache.ccache --silent')
         [Console]::Error.WriteLine('  winget install --id ShiningLight.OpenSSL.Light --silent')
         [Console]::Error.WriteLine('  winget install --id 7zip.7zip --silent')
+        [Console]::Error.WriteLine('  winget install --id cURL.cURL --silent')
+        [Console]::Error.WriteLine('  winget install --id GnuPG.GnuPG --silent')
         [Console]::Error.WriteLine('')
         [Console]::Error.WriteLine('Then re-run this script.')
         exit 1
@@ -105,6 +107,35 @@ if ($env:GITHUB_ENV) {
     "OPENSSL_ROOT_DIR=$opensslRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 }
 Write-Host "Using OpenSSL root: $opensslRoot"
+
+Write-Host 'Discovering zlib development files...'
+$zlibSearchRoots = @(
+    $env:ZLIB_ROOT,
+    "$env:ProgramFiles\zlib",
+    "$env:ChocolateyToolsLocation\zlib",
+    "$env:ChocolateyToolsLocation",
+    "$env:ProgramData\chocolatey\lib"
+) | Where-Object { $_ -and (Test-Path $_) }
+
+$zlibHeader = $zlibSearchRoots | ForEach-Object {
+    Get-ChildItem -Path $_ -Filter 'zlib.h' -Recurse -ErrorAction SilentlyContinue
+} | Select-Object -First 1
+
+if (-not $zlibHeader) {
+    throw 'zlib development files (zlib.h) were not found after package installation.'
+}
+
+$zlibRoot = Split-Path (Split-Path $zlibHeader.FullName -Parent) -Parent
+$zlibLib = Get-ChildItem -Path $zlibRoot -Filter 'zlib*.lib' -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+if (-not $zlibLib) {
+    throw "zlib import library (zlib*.lib) was not found under '$zlibRoot'."
+}
+
+$env:ZLIB_ROOT = $zlibRoot
+if ($env:GITHUB_ENV) {
+    "ZLIB_ROOT=$zlibRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+}
+Write-Host "Using zlib root: $zlibRoot"
 
 Write-Host 'Installed toolchain versions:'
 foreach ($tool in @('cmake', 'ninja', 'git', 'ccache')) {

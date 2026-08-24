@@ -149,7 +149,7 @@ jobs:
         run: .\scripts\install-windows.ps1
       - name: Configure
         shell: pwsh
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DOPENSSL_ROOT_DIR="$env:OPENSSL_ROOT_DIR"
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DOPENSSL_ROOT_DIR="$env:OPENSSL_ROOT_DIR" -DZLIB_ROOT="$env:ZLIB_ROOT"
       - name: Build
         shell: pwsh
         run: cmake --build build

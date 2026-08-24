@@ -11,6 +11,18 @@ if [ -f "$ANDROID_NDK_HOME/source.properties" ] && [ -f "$ANDROID_NDK_HOME/build
     exit 0
 fi
 
+if ! command -v curl >/dev/null 2>&1 || ! command -v gpg >/dev/null 2>&1; then
+    echo "==> [install-android] Installing curl/gnupg via system package manager (best effort)"
+    if [ "$(id -u)" -eq 0 ]; then SUDO=""; else SUDO="sudo"; fi
+    for cmd in "apt-get install -y" "dnf install -y" "yum install -y" "apk add --no-cache" "pacman -S --noconfirm --needed" "zypper --non-interactive install"; do
+        pm="${cmd%% *}"
+        if command -v "$pm" >/dev/null 2>&1; then
+            # shellcheck disable=SC2086
+            $SUDO $cmd curl gnupg && break || true
+        fi
+    done
+fi
+
 echo "==> [install-android] Downloading NDK $ANDROID_NDK_VERSION"
 TMPDIR_PREFIX="${XDG_CACHE_HOME:-$HOME/.cache}/install-android"
 mkdir -p "$TMPDIR_PREFIX"

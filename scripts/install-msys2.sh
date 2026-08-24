@@ -49,7 +49,10 @@ pacman -S --noconfirm --needed \
     mingw-w64-x86_64-cmake \
     mingw-w64-x86_64-ninja \
     mingw-w64-x86_64-ccache \
-    mingw-w64-x86_64-openssl
+    mingw-w64-x86_64-openssl \
+    mingw-w64-x86_64-curl \
+    gnupg \
+    curl
 
 printf '==> [install-msys2] Installed tool versions:\n'
 gcc --version

@@ -78,31 +78,31 @@ case "$PM" in
   apt)
     UPDATE_CMD="$SUDO apt-get update"
     INSTALL_CMD="$SUDO apt-get install -y"
-    BASE_PKGS="cmake ninja-build git ccache unzip gcc g++ pkg-config libssl-dev zlib1g-dev"
+    BASE_PKGS="cmake ninja-build git ccache unzip gcc g++ pkg-config curl gnupg libssl-dev zlib1g-dev"
     CROSS_PKGS="g++-aarch64-linux-gnu g++-riscv64-linux-gnu"
     ;;
   dnf)
     INSTALL_CMD="$SUDO dnf install -y"
-    BASE_PKGS="cmake ninja-build git ccache unzip gcc gcc-c++ pkgconf-pkg-config openssl-devel zlib-devel"
+    BASE_PKGS="cmake ninja-build git ccache unzip gcc gcc-c++ pkgconf-pkg-config curl gnupg2 openssl-devel zlib-devel"
     CROSS_PKGS="gcc-aarch64-linux-gnu gcc-riscv64-linux-gnu binutils-aarch64-linux-gnu binutils-riscv64-linux-gnu"
     ;;
   yum)
     INSTALL_CMD="$SUDO yum install -y"
-    BASE_PKGS="cmake ninja-build git ccache unzip gcc gcc-c++ pkgconfig openssl-devel zlib-devel"
+    BASE_PKGS="cmake ninja-build git ccache unzip gcc gcc-c++ pkgconfig curl gnupg2 openssl-devel zlib-devel"
     CROSS_PKGS="gcc-aarch64-linux-gnu gcc-riscv64-linux-gnu binutils-aarch64-linux-gnu binutils-riscv64-linux-gnu"
     ;;
   pacman)
     INSTALL_CMD="$SUDO pacman -S --noconfirm --needed"
-    BASE_PKGS="base-devel cmake ninja git ccache unzip gcc pkg-config openssl zlib"
+    BASE_PKGS="base-devel cmake ninja git ccache unzip gcc pkg-config curl gnupg openssl zlib"
     ;;
   apk)
     UPDATE_CMD="$SUDO apk update"
     INSTALL_CMD="$SUDO apk add --no-cache"
-    BASE_PKGS="cmake ninja git ccache unzip gcc g++ musl-dev pkgconf openssl-dev zlib-dev"
+    BASE_PKGS="cmake ninja git ccache unzip gcc g++ musl-dev pkgconf curl gnupg openssl-dev zlib-dev"
     ;;
   zypper)
     INSTALL_CMD="$SUDO zypper --non-interactive install"
-    BASE_PKGS="cmake ninja git ccache unzip gcc gcc-c++ pkg-config libopenssl-devel zlib-devel"
+    BASE_PKGS="cmake ninja git ccache unzip gcc gcc-c++ pkg-config curl gnupg libopenssl-devel zlib-devel"
     CROSS_PKGS="cross-aarch64-gcc14 cross-riscv64-gcc14"
     ;;
   *)
