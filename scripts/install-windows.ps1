@@ -131,6 +131,14 @@ try {
 }
 $vcpkgInstallRoot = Join-Path $manifestRoot 'vcpkg_installed\x64-windows'
 
+# Let CMake consume the manifest installation through vcpkg's toolchain.
+$env:VCPKG_ROOT = $vcpkgRoot
+$env:VCPKG_INSTALLED_DIR = Join-Path $manifestRoot 'vcpkg_installed'
+if ($env:GITHUB_ENV) {
+    "VCPKG_ROOT=$vcpkgRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+    "VCPKG_INSTALLED_DIR=$($env:VCPKG_INSTALLED_DIR)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+}
+
 Write-Host 'Refreshing PATH for the current process...'
 $machinePath = [Environment]::GetEnvironmentVariable('Path', 'Machine')
 $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
@@ -141,66 +149,7 @@ foreach ($tool in @('curl', 'gpg')) {
         throw "$tool is required but was not found after package installation."
     }
 }
-
-$opensslCandidates = @(
-    $env:OPENSSL_ROOT_DIR,
-    $vcpkgInstallRoot,
-    "$env:ProgramFiles\OpenSSL-Win64",
-    "$env:ProgramFiles\OpenSSL",
-    "$env:ChocolateyToolsLocation\openssl"
-)
-$opensslCommand = Get-Command openssl -ErrorAction SilentlyContinue
-if ($opensslCommand) {
-    $opensslCandidates += Split-Path (Split-Path $opensslCommand.Source -Parent) -Parent
-}
-
-$opensslRoot = $opensslCandidates |
-    Where-Object {
-        $_ -and
-        (Test-Path (Join-Path $_ 'include\openssl\ssl.h')) -and
-        (Get-ChildItem -Path $_ -Filter 'libcrypto*.lib' -Recurse -ErrorAction SilentlyContinue)
-    } |
-    Select-Object -First 1
-
-if (-not $opensslRoot) {
-    throw 'OpenSSL installation was not found after package installation.'
-}
-
-$env:OPENSSL_ROOT_DIR = $opensslRoot
-if ($env:GITHUB_ENV) {
-    "OPENSSL_ROOT_DIR=$opensslRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-}
-Write-Host "Using OpenSSL root: $opensslRoot"
-
-Write-Host 'Discovering zlib development files...'
-$zlibSearchRoots = @(
-    $env:ZLIB_ROOT,
-    $vcpkgInstallRoot,
-    "$env:ProgramFiles\zlib",
-    "$env:ChocolateyToolsLocation\zlib",
-    "$env:ChocolateyToolsLocation",
-    "$env:ProgramData\chocolatey\lib"
-) | Where-Object { $_ -and (Test-Path $_) }
-
-$zlibHeader = $zlibSearchRoots | ForEach-Object {
-    Get-ChildItem -Path $_ -Filter 'zlib.h' -Recurse -ErrorAction SilentlyContinue
-} | Select-Object -First 1
-
-if (-not $zlibHeader) {
-    throw 'zlib development files (zlib.h) were not found after package installation.'
-}
-
-$zlibRoot = Split-Path (Split-Path $zlibHeader.FullName -Parent) -Parent
-$zlibLib = Get-ChildItem -Path $zlibRoot -Filter 'zlib*.lib' -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
-if (-not $zlibLib) {
-    throw "zlib import library (zlib*.lib) was not found under '$zlibRoot'."
-}
-
-$env:ZLIB_ROOT = $zlibRoot
-if ($env:GITHUB_ENV) {
-    "ZLIB_ROOT=$zlibRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-}
-Write-Host "Using zlib root: $zlibRoot"
+Write-Host "Using vcpkg installed tree: $env:VCPKG_INSTALLED_DIR"
 
 Write-Host 'Installed toolchain versions:'
 foreach ($tool in @('cmake', 'ninja', 'git', 'ccache')) {
