@@ -192,10 +192,18 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
+      - name: Restore vcpkg binary cache
+        uses: actions/cache@v4
+        with:
+          path: C:\vcpkg-bincache
+          key: vcpkg-windows-msvc-${{ hashFiles('scripts/install-windows.ps1') }}
       - uses: ilammy/msvc-dev-cmd@v1
       - name: Install dependencies
         shell: pwsh
-        run: .\scripts\install-windows.ps1
+        run: |
+          New-Item -ItemType Directory -Force -Path C:\vcpkg-bincache | Out-Null
+          "VCPKG_BINARY_SOURCES=clear;files,C:\vcpkg-bincache,readwrite" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          .\scripts\install-windows.ps1
       - name: Configure
         shell: pwsh
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows -DVCPKG_INSTALLED_DIR="$env:VCPKG_INSTALLED_DIR"
