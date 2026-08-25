@@ -114,6 +114,14 @@ Write-Host 'Installing MSVC OpenSSL and zlib via vcpkg manifest mode...'
 $previousLocation = Get-Location
 try {
     Set-Location $manifestRoot
+    & $vcpkg x-update-baseline --add-initial-baseline
+    if ($LASTEXITCODE -ne 0) {
+        throw "vcpkg baseline initialization failed with exit code $LASTEXITCODE."
+    }
+    $manifest = Get-Content -Path (Join-Path $manifestRoot 'vcpkg.json') -Raw | ConvertFrom-Json
+    if (-not $manifest.'builtin-baseline') {
+        throw 'vcpkg baseline initialization did not add builtin-baseline to the manifest.'
+    }
     & $vcpkg install --triplet x64-windows --disable-metrics
     if ($LASTEXITCODE -ne 0) {
         throw "vcpkg dependency installation failed with exit code $LASTEXITCODE."
