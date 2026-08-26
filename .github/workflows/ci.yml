@@ -192,7 +192,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Restore vcpkg binary cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: C:\vcpkg-bincache
           key: vcpkg-windows-msvc-${{ hashFiles('scripts/install-windows.ps1') }}
