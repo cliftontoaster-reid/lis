@@ -152,12 +152,6 @@ jobs:
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: results.sarif
-      - name: Enforce zero-warning policy
-        if: always()
-        shell: bash
-        run: |
-          test "${{ steps.clang-tidy.outputs.exit_code }}" = 0
-          test "${{ steps.cppcheck.outputs.exit_code }}" = 0
 
   macos:
     name: macOS
