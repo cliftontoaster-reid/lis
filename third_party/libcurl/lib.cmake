@@ -35,3 +35,6 @@ FetchContent_Declare(
 )
 
 FetchContent_MakeAvailable(curl)
+
+include(${CMAKE_CURRENT_LIST_DIR}/../mark_system.cmake)
+lis_mark_system(libcurl libcurl_static libcurl_shared)

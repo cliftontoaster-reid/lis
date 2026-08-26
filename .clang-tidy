@@ -4,9 +4,13 @@ Checks: >-
   bugprone-*,
   cert-*,
   cppcoreguidelines-*,
-  readability-*
-WarningsAsErrors: '*'
-HeaderFilterRegex: '(^|[/\\])(include|src)[/\\]'
+  readability-*,
+  performance-*,
+  clang-analyzer-*,
+  misc-*,
+  modernize-*,
+  -misc-non-private-member-variables-in-classes
+HeaderFilterRegex: '(^|/)(include/fchat|src)/'
 FormatStyle: file
 InheritParentConfig: false
 ...

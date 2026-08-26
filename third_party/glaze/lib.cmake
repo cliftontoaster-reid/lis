@@ -12,3 +12,6 @@ FetchContent_Declare(
 )
 
 FetchContent_MakeAvailable(glaze)
+
+include(${CMAKE_CURRENT_LIST_DIR}/../mark_system.cmake)
+lis_mark_system(glaze glaze::glaze)

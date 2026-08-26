@@ -12,6 +12,9 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(ixwebsocket)
 
+include(${CMAKE_CURRENT_LIST_DIR}/../mark_system.cmake)
+lis_mark_system(ixwebsocket IXWebSocket::IXWebSocket)
+
 # Alias for consistent target naming matching your SQLite style
 if(TARGET ixwebsocket AND NOT TARGET IXWebSocket::IXWebSocket)
   add_library(IXWebSocket::IXWebSocket ALIAS ixwebsocket)

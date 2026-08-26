@@ -24,3 +24,6 @@ if(NOT TARGET sqlite3)
 
   target_link_libraries(sqlite3 PRIVATE ${CMAKE_DL_LIBS})
 endif()
+
+include(${CMAKE_CURRENT_LIST_DIR}/../mark_system.cmake)
+lis_mark_system(sqlite3)
