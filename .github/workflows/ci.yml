@@ -67,7 +67,7 @@ jobs:
         run: ctest --test-dir build --output-junit junit.xml --output-on-failure
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: junit.xml
@@ -93,7 +93,7 @@ jobs:
         run: cmake --build build --target coverage
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: build/junit.xml
@@ -175,7 +175,7 @@ jobs:
         run: ctest --test-dir build --output-junit junit.xml --output-on-failure
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: junit.xml
@@ -214,7 +214,7 @@ jobs:
         run: ctest --test-dir build --output-junit junit.xml --output-on-failure
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: junit.xml
@@ -248,7 +248,7 @@ jobs:
         run: ctest --test-dir build --output-junit junit.xml --output-on-failure
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: junit.xml
@@ -299,7 +299,7 @@ jobs:
         run: ctest --test-dir build --output-junit junit.xml --output-on-failure
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: junit.xml
