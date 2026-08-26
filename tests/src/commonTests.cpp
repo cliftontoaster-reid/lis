@@ -83,7 +83,8 @@ TEST(Common_MakeOpcodeIsConstexprAndNoexcept, ConstexprKnownValue) {
 }
 
 TEST(Common_MakeOpcodeIsConstexprAndNoexcept, IsNoexcept) {
-  static_assert(noexcept(fchat::make_opcode(std::string_view{"ABC"})),
+  constexpr std::string_view abc{"ABC"};
+  static_assert(noexcept(fchat::make_opcode(abc)),
                 "make_opcode must be declared noexcept");
 }
 

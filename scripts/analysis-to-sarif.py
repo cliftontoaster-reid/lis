@@ -19,7 +19,7 @@ def location(path, line, column):
     return {
         "physicalLocation": {
             "artifactLocation": {"uri": path.replace(os.sep, "/")},
-            "region": {"startLine": line, "startColumn": column},
+            "region": {"startLine": int(line), "startColumn": max(1, int(column))},
         }
     }
 
