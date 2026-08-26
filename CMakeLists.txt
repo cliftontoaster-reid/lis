@@ -33,9 +33,11 @@ endif()
 # ------------------------------------------------------------------------------
 set(LIS_SOURCES
   src/Command.cpp
+  src/fchat/c2s.cpp
+  src/fchat/s2c.cpp
 )
 
-if(LIS_BUILD_SHARED)
+if(LIS_BUILD_SHARED AND NOT LIS_BUILD_TESTS)
   add_library(lis SHARED ${LIS_SOURCES})
 else()
   add_library(lis STATIC ${LIS_SOURCES})
@@ -52,7 +54,7 @@ generate_export_header(lis
   EXPORT_MACRO_NAME LIS_EXPORT
 )
 
-target_compile_definitions(lis PRIVATE
+target_compile_definitions(lis PUBLIC
   LIS_NAME=\"${PROJECT_NAME}\"
   LIS_VERSION=\"${PROJECT_VERSION}\"
 
