@@ -1,16 +1,28 @@
 #pragma once
 
 #include <cstdint>
-#include <glaze/glaze.hpp>
+#include <glaze/core/opts.hpp>
+#include <glaze/glaze.hpp>  // IWYU pragma: keep
+#include <string_view>
 
 namespace fchat {
 
-constexpr std::uint16_t make_opcode(const char str[4]) noexcept {
-  std::uint16_t a = static_cast<std::uint16_t>(str[0] - 'A') & 0x1F;
-  std::uint16_t b = static_cast<std::uint16_t>(str[1] - 'A') & 0x1F;
-  std::uint16_t c = static_cast<std::uint16_t>(str[2] - 'A') & 0x1F;
+inline constexpr std::uint16_t kCharMask = 0x1F;
+inline constexpr std::uint16_t kCharBits = 5;
+inline constexpr std::uint16_t kCharShift = kCharBits * 2;
 
-  return (c << 10) | (b << 5) | a;
+// Precondition: str has exactly 3 characters, each in the range 'A'..'Z'.
+constexpr auto make_opcode(std::string_view str) noexcept -> std::uint16_t {
+  const std::uint16_t first =
+      static_cast<std::uint16_t>(static_cast<unsigned char>(str.at(0)) - 'A') &
+      kCharMask;
+  const std::uint16_t second =
+      static_cast<std::uint16_t>(static_cast<unsigned char>(str.at(1)) - 'A') &
+      kCharMask;
+  const std::uint16_t third =
+      static_cast<std::uint16_t>(static_cast<unsigned char>(str.at(2)) - 'A') &
+      kCharMask;
+  return (third << kCharShift) | (second << kCharBits) | first;
 }
 
 enum class C2SOpCode : std::uint16_t {
@@ -61,36 +73,31 @@ enum class C2SOpCode : std::uint16_t {
 };
 
 enum class S2COpCode : std::uint16_t {
-  ACH = make_opcode("ACH"),
   ADL = make_opcode("ADL"),
   AOP = make_opcode("AOP"),
-  AWC = make_opcode("AWC"),
   BRO = make_opcode("BRO"),
-  CBL = make_opcode("CBL"),
   CBU = make_opcode("CBU"),
-  CCR = make_opcode("CCR"),
   CDS = make_opcode("CDS"),
   CHA = make_opcode("CHA"),
   CIU = make_opcode("CIU"),
   CKU = make_opcode("CKU"),
   COA = make_opcode("COA"),
   COL = make_opcode("COL"),
+  CON = make_opcode("CON"),
   COR = make_opcode("COR"),
   CSO = make_opcode("CSO"),
   CTU = make_opcode("CTU"),
-  CUB = make_opcode("CUB"),
   DOP = make_opcode("DOP"),
   ERR = make_opcode("ERR"),
   FKS = make_opcode("FKS"),
   FLN = make_opcode("FLN"),
+  HLO = make_opcode("HLO"),
   FRL = make_opcode("FRL"),
   ICH = make_opcode("ICH"),
   IDN = make_opcode("IDN"),
   IGN = make_opcode("IGN"),
   JCH = make_opcode("JCH"),
-  KIC = make_opcode("KIC"),
-  KIK = make_opcode("KIK"),
-  KIN = make_opcode("KIN"),
+  KID = make_opcode("KID"),
   LCH = make_opcode("LCH"),
   LIS = make_opcode("LIS"),
   LRP = make_opcode("LRP"),
@@ -106,23 +113,20 @@ enum class S2COpCode : std::uint16_t {
   SFC = make_opcode("SFC"),
   STA = make_opcode("STA"),
   SYS = make_opcode("SYS"),
-  TMO = make_opcode("TMO"),
   TPN = make_opcode("TPN"),
   UPT = make_opcode("UPT"),
   VAR = make_opcode("VAR"),
 };
 
-struct fchat_opts : glz::opts {
-  bool quoted_num = true;
-};
+inline constexpr glz::opts fchat_opts{.quoted_num = 1};
 
-enum class ChannelMode {
+enum class ChannelMode : std::int8_t {
   CHAT,
   ADS,
   BOTH,
 };
 
-enum class ErrorCode : int {
+enum class ErrorCode : std::int8_t {
   Success = 0,
   SyntaxError = 1,
   NoFreeSlots = 2,
@@ -201,8 +205,8 @@ enum class Permission : std::uint32_t {
   FormerStaff = 0x20000
 };
 
-[[nodiscard]] constexpr bool has_permission(std::uint32_t mask,
-                                            Permission perm) noexcept {
+[[nodiscard]] constexpr auto has_permission(std::uint32_t mask,
+                                            Permission perm) noexcept -> bool {
   return (mask & static_cast<std::uint32_t>(perm)) != 0;
 }
 

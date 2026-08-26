@@ -1,33 +1,33 @@
 #pragma once
 
 #include <string>
+#include <string_view>
+#include <utility>
 
-namespace fchat {
-
-namespace util {
+namespace fchat::util {
 
 inline void url_encode_append(std::string_view input, std::string& out) {
-  static constexpr char hex_digits[] = "0123456789ABCDEF";
+  static constexpr std::string_view kHexDigits = "0123456789ABCDEF";
+  static constexpr unsigned char kLowNibbleMask = 0x0F;
 
-  // Pre-reserve capacity to prevent intermediate reallocations
   out.reserve(out.size() + input.size());
 
-  for (const unsigned char c : input) {
-    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
-        (c >= '0' && c <= '9') || c == '-' || c == '_' || c == '.' ||
-        c == '~') {
-      out.push_back(static_cast<char>(c));
-    } else if (c == ' ') {
+  for (const unsigned char byte : input) {
+    if ((byte >= 'a' && byte <= 'z') || (byte >= 'A' && byte <= 'Z') ||
+        (byte >= '0' && byte <= '9') || byte == '-' || byte == '_' ||
+        byte == '.' || byte == '~') {
+      out.push_back(static_cast<char>(byte));
+    } else if (byte == ' ') {
       out.push_back('+');
     } else {
       out.push_back('%');
-      out.push_back(hex_digits[c >> 4]);
-      out.push_back(hex_digits[c & 0x0F]);
+      out.push_back(kHexDigits.at(byte >> 4));
+      out.push_back(kHexDigits.at(byte & kLowNibbleMask));
     }
   }
 }
 
-inline void append_kv(std::string& out, bool& first, std::string_view key,
+inline void append_kv(std::string& out, std::string_view key, bool& first,
                       std::string_view value) {
   if (!first) {
     out.push_back('&');
@@ -42,9 +42,10 @@ inline void append_kv(std::string& out, bool& first, std::string_view key,
 template <typename... Args>
 void build_form_encoded(std::string& out, Args&&... kvs) {
   bool first = true;
-  (append_kv(out, first, kvs.first, kvs.second), ...);
+  auto emit = [&](auto&& kv_pair) -> auto {
+    append_kv(out, kv_pair.first, first, kv_pair.second);
+  };
+  (emit(std::forward<Args>(kvs)), ...);
 }
 
-}  // namespace util
-
-}  // namespace fchat
+}  // namespace fchat::util
